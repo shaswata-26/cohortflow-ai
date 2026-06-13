@@ -138,7 +138,7 @@ Student: student@cohortflow.ai / Password@123
 ## Deployment suggestion
 
 - Frontend: Vercel
-- Backend: Render / Railway / VPS
+- Backend: Render / 
 - Database: Neon / Supabase Postgres / Railway Postgres
 
 Set frontend env:
