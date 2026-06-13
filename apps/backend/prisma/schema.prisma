@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MENTOR
+  STUDENT
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CohortStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
+
+enum LessonStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum SubmissionStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  REVIEWED
+  NEEDS_IMPROVEMENT
+  LATE_SUBMISSION
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(STUDENT)
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mentoredCohorts Cohort[]        @relation("MentorCohorts")
+  cohortLinks     CohortStudent[]
+  lessonsCreated  Lesson[]        @relation("LessonCreator")
+  assignments     Assignment[]    @relation("AssignmentCreator")
+  submissions     Submission[]
+  attendance      Attendance[]
+  feedbackGiven   Feedback[]      @relation("MentorFeedback")
+  feedbackReceived Feedback[]     @relation("StudentFeedback")
+}
+
+model Course {
+  id          String       @id @default(cuid())
+  title       String
+  slug        String       @unique
+  description String
+  category    String
+  duration    String
+  status      CourseStatus @default(DRAFT)
+  coverImage  String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  cohorts Cohort[]
+}
+
+model Cohort {
+  id        String       @id @default(cuid())
+  name      String
+  courseId  String
+  mentorId  String?
+  startDate DateTime
+  endDate   DateTime
+  status    CohortStatus @default(UPCOMING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  course      Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  mentor      User?           @relation("MentorCohorts", fields: [mentorId], references: [id])
+  students    CohortStudent[]
+  lessons     Lesson[]
+  assignments Assignment[]
+  attendance  Attendance[]
+}
+
+model CohortStudent {
+  id        String   @id @default(cuid())
+  cohortId  String
+  studentId String
+  joinedAt  DateTime @default(now())
+
+  cohort  Cohort @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([cohortId, studentId])
+}
+
+model Lesson {
+  id          String       @id @default(cuid())
+  title       String
+  description String
+  content     String
+  resourceUrl String?
+  cohortId    String
+  createdById String
+  status      LessonStatus @default(DRAFT)
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  cohort    Cohort @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  createdBy User   @relation("LessonCreator", fields: [createdById], references: [id])
+}
+
+model Assignment {
+  id           String   @id @default(cuid())
+  title        String
+  instructions String
+  dueDate      DateTime
+  maxMarks     Int      @default(100)
+  cohortId     String
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cohort      Cohort       @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation("AssignmentCreator", fields: [createdById], references: [id])
+  submissions Submission[]
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  studentId    String
+  answerText   String?
+  fileUrl      String?
+  status       SubmissionStatus @default(SUBMITTED)
+  marks        Int?
+  feedback     String?
+  submittedAt  DateTime         @default(now())
+  reviewedAt   DateTime?
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  cohortId  String
+  studentId String
+  date      DateTime
+  status    AttendanceStatus
+  note      String?
+  createdAt DateTime         @default(now())
+
+  cohort  Cohort @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([cohortId, studentId, date])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  studentId String
+  mentorId  String
+  message   String
+  rating    Int
+  createdAt DateTime @default(now())
+
+  student User @relation("StudentFeedback", fields: [studentId], references: [id], onDelete: Cascade)
+  mentor  User @relation("MentorFeedback", fields: [mentorId], references: [id], onDelete: Cascade)
+}

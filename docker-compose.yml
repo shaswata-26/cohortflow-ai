@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cohortflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cohortflow
+      POSTGRES_PASSWORD: cohortflow
+      POSTGRES_DB: cohortflow_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - cohortflow_pg:/var/lib/postgresql/data
+volumes:
+  cohortflow_pg:
